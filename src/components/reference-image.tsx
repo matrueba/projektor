@@ -33,7 +33,7 @@ export function ReferenceImageComponent({ uploadedImage, setUploadedImage }: { u
                 disabled={isUploading}
             />
             {uploadedImage ? (
-                <div className="relative w-full h-full min-h-[160px] group border rounded-md overflow-hidden bg-muted/50">
+                <div className="relative w-full aspect-video group border rounded-md overflow-hidden bg-muted/50">
                     <img src={uploadedImage} alt="Reference" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Button
@@ -46,14 +46,14 @@ export function ReferenceImageComponent({ uploadedImage, setUploadedImage }: { u
                     </div>
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center p-8 border border-dashed rounded-md bg-muted/50 h-full min-h-[160px]">
+                <div className="flex flex-col items-center justify-center p-8 border border-dashed rounded-md bg-muted/50 w-full aspect-video">
                     <ImageIcon className="w-8 h-8 text-muted-foreground mb-4" />
-                    <Button onClick={() => (inputRef.current?.click())} disabled={isUploading} variant="secondary">
-                        {isUploading ? "Uploading..." : "Upload Reference Image (Optional)"}
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                    <p className="text-sm font-medium text-muted-foreground mb-4">
                         Use as style/structure reference
                     </p>
+                    <Button onClick={() => (inputRef.current?.click())} disabled={isUploading} variant="outline" className="mt-2 hover:bg-muted/90">
+                        {isUploading ? "Uploading..." : "Upload Reference Image (Optional)"}
+                    </Button>
                 </div>
             )}
         </div>

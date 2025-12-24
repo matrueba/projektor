@@ -142,3 +142,4 @@ vite.config.ts.timestamp-*
 .env.development
 .env.production
 .package-lock.json
+.vscode

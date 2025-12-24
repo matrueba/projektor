@@ -109,21 +109,17 @@ export class ComfyUiClient {
         }
     }
 
-    async uploadImage(file: string, filename: string = 'image.jpg', folderType: string = "input", overwrite: boolean = false): Promise<any> {
+    async uploadImage(file: string, filename: string = 'image_reference.jpg', overwrite: boolean = false): Promise<any> {
         try {
-            let blob: Blob;
-
-            // Check if file is a Data URI
-            if (file.startsWith('data:')) {
-                const response = await fetch(file);
-                blob = await response.blob();
-            } else {
-                // Assume it's a raw string or binary buffer if not data uri (fallback)
-                blob = new Blob([file]);
-            }
+            const downloadImg = await fetch(file);
+            const imgBlob = await downloadImg.blob();
             const formData = new FormData();
-            formData.append('image', blob, filename);
-            formData.append('type', folderType);
+            if (imgBlob instanceof ArrayBuffer || imgBlob instanceof Uint8Array) {
+                formData.append("image", new Blob([imgBlob as BlobPart]), filename);
+            } else {
+                formData.append("image", imgBlob as Blob, filename);
+            }
+            formData.append('subfolder', "");
             formData.append('overwrite', String(overwrite).toLowerCase());
 
             const response = await fetch(`http://${this.serverAddress}/upload/image`, {
@@ -134,8 +130,8 @@ export class ComfyUiClient {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
-            return await response.json();
+            const imgInfo = await response.json();
+            return imgInfo;
         } catch (error) {
             console.error("Error uploading image:", error);
             return null;
@@ -165,7 +161,32 @@ export class ComfyUiClient {
         return workflow;
     }
 
-    updateWorkflowImg(workflow: any, inputPath: string, positivePrompt: string): any {
+    updateVideoWorkflow(workflow: any, positivePrompt: string, filename: string): any {
+        const idToClassType: Record<string, string> = {};
+        for (const [id, details] of Object.entries(workflow) as [string, any][]) {
+            idToClassType[id] = details.class_type;
+        }
+
+        const kSamplerId = Object.keys(idToClassType).find(key => idToClassType[key] === 'KSamplerAdvanced');
+        const imageLoaderId = Object.keys(idToClassType).find(key => idToClassType[key] === "LoadImage");
+        if (kSamplerId && imageLoaderId) {
+
+            workflow[imageLoaderId].inputs.image = filename;
+
+            // Update positive prompt
+            const sizeLengthId = workflow[kSamplerId].inputs.positive[0];
+            if (workflow[sizeLengthId]) {
+                const positivePromptId = workflow[sizeLengthId].inputs.positive[0];
+                if (workflow[positivePromptId]) {
+                    workflow[positivePromptId].inputs.text = positivePrompt;
+                }
+            }
+        }
+
+        return workflow;
+    }
+
+    updateImg2ImgWorkflow(workflow: any, inputPath: string, positivePrompt: string): any {
         // First update generic parts
         this.updateWorkflow(workflow, positivePrompt);
 
@@ -184,7 +205,7 @@ export class ComfyUiClient {
         return workflow;
     }
 
-    async trackProgress(promptId: string): Promise<boolean> {
+    async trackProgress(promptId: string, onProgress?: (value: number, max: number) => void): Promise<boolean> {
         if (!this.ws) {
             console.error("WebSocket not connected");
             return false;
@@ -197,6 +218,9 @@ export class ComfyUiClient {
 
                     if (message.type === 'progress') {
                         console.log(`Progress: ${message.data.value}/${message.data.max}`);
+                        if (onProgress) {
+                            onProgress(message.data.value, message.data.max);
+                        }
                     } else if (message.type === 'executing') {
                         console.log(`Executing node: ${message.data.node}`);
                     } else if (message.type === 'execution_cached') {
@@ -210,38 +234,31 @@ export class ComfyUiClient {
                     }
                 } catch (error) {
                     console.error("Error processing message:", error);
-                    // We don't necessarily reject here to keep listening, but if critical...
                 }
             };
 
             this.ws?.on('message', handleMessage);
-
-            // Optional: timeout
-            // setTimeout(() => {
-            //    this.ws?.off('message', handleMessage);
-            //    resolve(false);
-            // }, 300000); // 5 minutes timeout
         });
     }
 
-    async generateImage(generationParameters: { positive_prompt: string; input_path?: string; workflow_path?: string }): Promise<ArrayBuffer[]> {
+    async generateImage(generationParameters: { positivePrompt: string; inputPath?: string; workflowPath?: string }, onProgress?: (value: number, max: number) => void): Promise<ArrayBuffer[]> {
         try {
             if (!this.ws) {
                 await this.connect()
             }
 
-            const workflowPath = generationParameters.workflow_path || "src/workflows/z-image-turbo.json";
+            const workflowPath = generationParameters.workflowPath || "src/workflows/z-image-turbo.json";
             let workflow = await this.loadWorkflow(workflowPath);
             if (!workflow) throw new Error("Workflow not found");
 
-            workflow = this.updateWorkflow(workflow, generationParameters.positive_prompt);
+            workflow = this.updateWorkflow(workflow, generationParameters.positivePrompt);
 
             const promptResponse = await this.queuePrompt(workflow);
             if (!promptResponse) throw new Error("Failed to queue prompt");
 
             const promptId = promptResponse.prompt_id;
 
-            const completed = await this.trackProgress(promptId);
+            const completed = await this.trackProgress(promptId, onProgress);
             if (!completed) throw new Error("Generation failed or interrupted");
 
             const history = await this.getHistory(promptId);
@@ -256,8 +273,8 @@ export class ComfyUiClient {
                         const imageData = await this.getImage(image.filename, image.subfolder, image.type);
                         if (imageData) {
                             results.push(imageData);
-                            const buffer = Buffer.from(imageData);
-                            await fs.writeFile(`src/examples/${image.filename}`, buffer);
+                            //const buffer = Buffer.from(imageData);
+                            //await fs.writeFile(`src/examples/${image.filename}`, buffer);
                         }
                     }
                 }
@@ -272,32 +289,31 @@ export class ComfyUiClient {
         }
     }
 
-    async generateImage2Image(generationParameters: { positive_prompt: string; referenceImage?: string; workflow_path?: string }): Promise<ArrayBuffer[]> {
+    async generateImage2Image(generationParameters: { positivePrompt: string; referenceImage?: string; workflowPath?: string }, onProgress?: (value: number, max: number) => void): Promise<ArrayBuffer[]> {
         try {
             if (!this.ws) {
                 await this.connect()
             }
 
-            const workflowPath = generationParameters.workflow_path || "src/workflows/z-image-turbo.json";
+            const workflowPath = generationParameters.workflowPath || "src/workflows/z-image-turbo.json";
             let workflow = await this.loadWorkflow(workflowPath);
             if (!workflow) throw new Error("Workflow not found");
 
             if (!generationParameters.referenceImage) {
                 console.log("No reference image provided");
-                workflow = this.updateWorkflow(workflow, generationParameters.positive_prompt)
+                workflow = this.updateWorkflow(workflow, generationParameters.positivePrompt)
                 return []
             }
 
-            // Upload image first
             await this.uploadImage(generationParameters.referenceImage);
-            workflow = this.updateWorkflowImg(workflow, generationParameters.referenceImage, generationParameters.positive_prompt);
+            workflow = this.updateImg2ImgWorkflow(workflow, generationParameters.referenceImage, generationParameters.positivePrompt);
 
             const promptResponse = await this.queuePrompt(workflow);
             if (!promptResponse) throw new Error("Failed to queue prompt");
 
             const promptId = promptResponse.prompt_id;
 
-            const completed = await this.trackProgress(promptId);
+            const completed = await this.trackProgress(promptId, onProgress);
             if (!completed) throw new Error("Generation failed or interrupted");
 
             const history = await this.getHistory(promptId);
@@ -327,7 +343,53 @@ export class ComfyUiClient {
         }
     }
 
-    async generateVideo(generationParameters: { positive_prompt: string; input_path?: string; workflow_path?: string }): Promise<ArrayBuffer[]> {
-        return [];
+    async generateVideo(generationParameters: { positivePrompt: string; imageUrl: string; workflowPath?: string }, onProgress?: (value: number, max: number) => void): Promise<ArrayBuffer[]> {
+        try {
+            if (!this.ws) {
+                await this.connect()
+            }
+
+            const workflowPath = generationParameters.workflowPath || "src/workflows/video_wan2_2_14B_i2v.json";
+            let workflow = await this.loadWorkflow(workflowPath);
+            if (!workflow) throw new Error("Workflow not found");
+
+            const response = await this.uploadImage(generationParameters.imageUrl);
+            const filename = response.name;
+            workflow = this.updateVideoWorkflow(workflow, generationParameters.positivePrompt, filename);
+
+            const promptResponse = await this.queuePrompt(workflow);
+            if (!promptResponse) throw new Error("Failed to queue prompt");
+
+            const promptId = promptResponse.prompt_id;
+
+            const completed = await this.trackProgress(promptId, onProgress);
+            if (!completed) throw new Error("Generation failed or interrupted");
+
+            const history = await this.getHistory(promptId);
+            const outputs = history[promptId].outputs;
+
+            const results: ArrayBuffer[] = [];
+
+            for (const nodeId in outputs) {
+                const nodeOutput = outputs[nodeId];
+                if (nodeOutput.images) {
+                    for (const image of nodeOutput.images) {
+                        const imageData = await this.getImage(image.filename, image.subfolder, image.type);
+                        if (imageData) {
+                            results.push(imageData);
+                            //const buffer = Buffer.from(imageData);
+                            //await fs.writeFile(`src/examples/${image.filename}`, buffer);
+                        }
+                    }
+                }
+            }
+            return results;
+
+        } catch (error) {
+            console.error("Error in generateImage:", error);
+            return [];
+        } finally {
+            await this.disconnect();
+        }
     }
 }

@@ -9,7 +9,11 @@ import { cookies } from "next/headers"
 import { Scene } from '@/types'
 import { ComfyUiClient } from '@/services/comfyui-client'
 import { createAdminClient } from '@/lib/supabase/admin'
+import fs from 'fs'
+import path from 'path'
+import { randomUUID } from 'crypto'
 
+const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET_NAME || 'projektor_images'
 
 export async function createProject(data: CreateProjectInput) {
   const cookieStore = await cookies()
@@ -25,14 +29,14 @@ export async function createProject(data: CreateProjectInput) {
   const { data: project, error } = await supabase
     .from('projects')
     .insert({
-      user_id: user.id,
+      userId: user.id,
       name: data.name,
       theme: data.theme,
       style: data.style,
       constraints: data.constraints,
-      max_duration: data.maxDuration,
-      generation_mode: data.generationMode,
-      scene_count: data.sceneCount,
+      maxDuration: data.maxDuration,
+      generationMode: data.generationMode,
+      sceneCount: data.sceneCount,
       status: 'script'
     })
     .select()
@@ -48,13 +52,13 @@ export async function createProject(data: CreateProjectInput) {
   try {
     const script = await generateScript(data.theme, data.style, data.sceneCount, data.maxDuration)
     const scenesToInsert = script.scenes.map((scene: Scene) => ({
-      project_id: project.id,
+      projectId: project.id,
       order: scene.order,
       script: scene.script,
-      image_prompt: scene.imagePrompt,
-      video_prompt: scene.videoPrompt,
-      start_at: scene.startAt,
-      end_at: scene.endAt,
+      imagePrompt: scene.imagePrompt,
+      videoPrompt: scene.videoPrompt,
+      startAt: scene.startAt,
+      endAt: scene.endAt,
       status: 'pending'
     }))
 
@@ -110,7 +114,7 @@ export async function generateImagesForProject(projectId: string) {
   const { data: scenes, error: scenesError } = await supabase
     .from('scenes')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('projectId', projectId)
 
   if (scenesError) {
     return { error: 'Failed to load scenes' }
@@ -128,7 +132,7 @@ export async function generateImagesForProject(projectId: string) {
 
       const comfyuiClient = new ComfyUiClient()
       await comfyuiClient.connect()
-      const images = await comfyuiClient.generateImage({ positive_prompt: scene.imagePrompt })
+      const images = await comfyuiClient.generateImage({ positivePrompt: scene.imagePrompt })
       await comfyuiClient.disconnect()
 
       if (!images || images.length === 0) {
@@ -141,7 +145,7 @@ export async function generateImagesForProject(projectId: string) {
 
       const { error: uploadError } = await adminSupabase
         .storage
-        .from(process.env.SUPABASE_STORAGE_BUCKET_NAME || 'images')
+        .from(STORAGE_BUCKET)
         .upload(fileName, imageBuffer, {
           contentType: 'image/png',
           upsert: true
@@ -152,16 +156,10 @@ export async function generateImagesForProject(projectId: string) {
         continue
       }
 
-      const { data: { publicUrl } } = supabase
-        .storage
-        .from(process.env.SUPABASE_STORAGE_BUCKET_NAME || 'images')
-        .getPublicUrl(fileName)
-
-      const imageUrl = publicUrl
-
+      const imageUrl = fileName
       const { error: updateError } = await supabase
         .from('scenes')
-        .update({ image_url: imageUrl, status: 'completed' })
+        .update({ imageUrl: imageUrl, status: 'completed' })
         .eq('id', scene.id)
 
       if (updateError) {
@@ -198,7 +196,7 @@ export async function generateVideosForProject(projectId: string) {
   const { data: scenes, error: scenesError } = await supabase
     .from('scenes')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('projectId', projectId)
 
   if (scenesError) {
     return { error: 'Failed to load scenes' }
@@ -216,12 +214,12 @@ export async function generateVideosForProject(projectId: string) {
 
       const comfyuiClient = new ComfyUiClient()
       await comfyuiClient.connect()
-      const videoUrl = await comfyuiClient.generateVideo({ positive_prompt: scene.videoPrompt })
+      const videoUrl = await comfyuiClient.generateVideo({ positivePrompt: scene.videoPrompt, imageUrl: scene.imageUrl })
       await comfyuiClient.disconnect()
 
       const { error: updateError } = await supabase
         .from('scenes')
-        .update({ video_url: videoUrl, status: 'completed' })
+        .update({ videoUrl: videoUrl, status: 'completed' })
         .eq('id', scene.id)
 
       if (updateError) {
@@ -267,36 +265,44 @@ export async function generateImageForScene(sceneId: string, referenceImage?: st
     return { error: 'Scene not found' }
   }
 
-  if (!scene.image_prompt) {
+  if (!scene.imagePrompt) {
     return { error: 'No image prompt for scene' }
   }
 
   try {
+    const adminSupabase = createAdminClient()
+    const channel = adminSupabase.channel(`scene-${sceneId}`)
+    channel.subscribe()
+
+    const onProgress = async (value: number, max: number) => {
+      await channel.send({
+        type: 'broadcast',
+        event: 'progress',
+        payload: { value, max }
+      })
+    }
+
     const comfyuiClient = new ComfyUiClient()
     await comfyuiClient.connect()
-
     let images: ArrayBuffer[] = []
-
     if (referenceImage) {
       console.log('Reference image provided:', referenceImage)
-      images = await comfyuiClient.generateImage2Image({ positive_prompt: scene.image_prompt, referenceImage })
+      images = await comfyuiClient.generateImage2Image({ positivePrompt: scene.imagePrompt, referenceImage }, onProgress)
     } else {
-      images = await comfyuiClient.generateImage({ positive_prompt: scene.image_prompt })
+      images = await comfyuiClient.generateImage({ positivePrompt: scene.imagePrompt }, onProgress)
     }
 
     await comfyuiClient.disconnect()
+    await adminSupabase.removeChannel(channel)
 
     if (!images || images.length === 0) {
       return { error: 'No images generated' }
     }
-
     const imageBuffer = images[0]
-
-    const fileName = `${scene['project_id']}/${scene.id}-${Date.now()}.png`
-
-    const { error: uploadError } = await supabase
+    const fileName = `${scene.projectId}/${scene.id}-${Date.now()}.png`
+    const { error: uploadError } = await adminSupabase
       .storage
-      .from('images')
+      .from(STORAGE_BUCKET)
       .upload(fileName, imageBuffer, {
         contentType: 'image/png',
         upsert: true
@@ -307,14 +313,9 @@ export async function generateImageForScene(sceneId: string, referenceImage?: st
       return { error: 'Failed to upload image' }
     }
 
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from('images')
-      .getPublicUrl(fileName)
-
     const { error: updateError } = await supabase
       .from('scenes')
-      .update({ image_url: publicUrl })
+      .update({ imageUrl: fileName })
       .eq('id', sceneId)
 
     if (updateError) {
@@ -330,7 +331,8 @@ export async function generateImageForScene(sceneId: string, referenceImage?: st
   return { success: true }
 }
 
-export async function generateVideoForScene(sceneId: string) {
+
+export async function generateVideoForScene(sceneId: string, imagePath: string) {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
 
@@ -349,19 +351,50 @@ export async function generateVideoForScene(sceneId: string) {
     return { error: 'Scene not found' }
   }
 
-  if (!scene.video_prompt || !scene.image_url) {
+  if (!scene.videoPrompt || !scene.imageUrl) {
     return { error: 'Missing video prompt or image url' }
   }
 
   try {
+    const adminSupabase = createAdminClient()
+    const channel = adminSupabase.channel(`scene-${sceneId}`)
+    channel.subscribe()
+
+    const onProgress = async (value: number, max: number) => {
+      await channel.send({
+        type: 'broadcast',
+        event: 'progress',
+        payload: { value, max }
+      })
+    }
+
     const comfyuiClient = new ComfyUiClient()
     await comfyuiClient.connect()
-    const videoUrl = await comfyuiClient.generateVideo({ positive_prompt: scene.video_prompt })
+    const videos = await comfyuiClient.generateVideo({ positivePrompt: scene.videoPrompt, imageUrl: imagePath }, onProgress)
     await comfyuiClient.disconnect()
+
+
+    if (!videos || videos.length === 0) {
+      return { error: 'No videos generated' }
+    }
+    const videoBuffer = videos[0]
+    const fileName = `${scene.projectId}/${scene.id}-${Date.now()}.mp4`
+    const { error: uploadError } = await adminSupabase
+      .storage
+      .from(STORAGE_BUCKET)
+      .upload(fileName, videoBuffer, {
+        contentType: 'video/mp4',
+        upsert: true
+      })
+
+    if (uploadError) {
+      console.error('Failed to upload video', uploadError)
+      return { error: 'Failed to upload video' }
+    }
 
     const { error: updateError } = await supabase
       .from('scenes')
-      .update({ video_url: videoUrl })
+      .update({ videoUrl: fileName })
       .eq('id', sceneId)
 
     if (updateError) {
@@ -414,7 +447,7 @@ export async function updateSceneScript(sceneId: string, script: string, newImag
 
   const { error } = await supabase
     .from('scenes')
-    .update({ script: script, image_prompt: newImagePrompt, video_prompt: videoPrompt })
+    .update({ script: script, imagePrompt: newImagePrompt, videoPrompt: videoPrompt })
     .eq('id', sceneId)
 
   if (error) {
@@ -438,7 +471,7 @@ export async function deleteProject(projectId: string) {
     .from('projects')
     .delete()
     .eq('id', projectId)
-    .eq('user_id', user.id)
+    .eq('userId', user.id)
 
   if (error) {
     console.error('Failed to delete project', error)
@@ -465,7 +498,7 @@ export async function uploadSceneImage(sceneId: string, formData: FormData) {
 
   const { data: scene, error: sceneError } = await supabase
     .from('scenes')
-    .select('project_id')
+    .select('projectId')
     .eq('id', sceneId)
     .single()
 
@@ -473,11 +506,12 @@ export async function uploadSceneImage(sceneId: string, formData: FormData) {
     return { error: 'Scene not found' }
   }
 
-  const fileName = `${scene.project_id}/${sceneId}-${Date.now()}.png`
+  const fileName = `${scene.projectId}/${sceneId}-${Date.now()}.png`
 
-  const { error: uploadError } = await supabase
+  const adminSupabase = createAdminClient()
+  const { error: uploadError } = await adminSupabase
     .storage
-    .from('images')
+    .from(STORAGE_BUCKET)
     .upload(fileName, file, {
       contentType: file.type,
       upsert: true
@@ -488,14 +522,10 @@ export async function uploadSceneImage(sceneId: string, formData: FormData) {
     return { error: 'Failed to upload image: ' + uploadError.message }
   }
 
-  const { data: { publicUrl } } = supabase
-    .storage
-    .from('images')
-    .getPublicUrl(fileName)
-
+  // Store path instead of public URL
   const { error: updateError } = await supabase
     .from('scenes')
-    .update({ image_url: publicUrl, status: 'completed' })
+    .update({ imageUrl: fileName, status: 'completed' })
     .eq('id', sceneId)
 
   if (updateError) {
@@ -504,5 +534,28 @@ export async function uploadSceneImage(sceneId: string, formData: FormData) {
   }
 
   revalidatePath('/projects/[id]', 'page')
-  return { success: true, imageUrl: publicUrl }
+  return { success: true, imageUrl: fileName }
+}
+
+
+export async function getSignedUrl(path: string, options?: { download?: boolean }) {
+  const adminSupabase = createAdminClient()
+
+  try {
+    const { data, error } = await adminSupabase
+      .storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(path, 60 * 60, { // 1 hour expiry
+        download: options?.download ? true : undefined
+      })
+
+    if (error) {
+      console.error('[getSignedUrl] Failed to create signed URL', error)
+      return { error: 'Failed to create signed URL' }
+    }
+    return { success: true, signedUrl: data.signedUrl }
+  } catch (error) {
+    console.error('[getSignedUrl] Error creating signed URL', error)
+    return { error: 'Error creating signed URL' }
+  }
 }

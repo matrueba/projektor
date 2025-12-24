@@ -14,6 +14,16 @@ CREATE TABLE IF NOT EXISTS projects (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Configuration: Configuration for a project
+CREATE TABLE IF NOT EXISTS project_configuration (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  local BOOLEAN DEFAULT TRUE,
+  remote_url TEXT,
+  remote_token TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Scenes: Individual steps in the video
 CREATE TABLE IF NOT EXISTS scenes (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -27,6 +37,8 @@ CREATE TABLE IF NOT EXISTS scenes (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+
 -- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_project_configurations_project_id ON project_configurations(project_id);
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_scenes_project_id ON scenes(project_id);

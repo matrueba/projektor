@@ -3,7 +3,6 @@
 import { ImageComponent } from "@/components/image-component"
 import { VideoComponent } from "@/components/video-component"
 import { ScriptComponent } from "@/components/script-component"
-import { ReferenceImageComponent } from "@/components/reference-image"
 import { useState } from "react"
 
 interface Scene {
@@ -17,8 +16,7 @@ interface Scene {
 }
 
 export function SceneCard({ scene, enableGeneration }: { scene: Scene; enableGeneration?: boolean }) {
-    const [uploadedI2IReferenceImage, setUploadedI2IReferenceImage] = useState<string | null>(null)
-    const [uploadedI2VReferenceVideo, setUploadedI2VReferenceVideo] = useState<string | null>(null)
+
 
     return (
         <div className="group bg-card rounded-xl border shadow-sm transition-all hover:shadow-md">
@@ -33,22 +31,15 @@ export function SceneCard({ scene, enableGeneration }: { scene: Scene; enableGen
                     <div className="grid grid-cols-1 gap-4">
                         <ScriptComponent sceneId={scene.id} initialScript={scene.script} initialImagePrompt={scene.imagePrompt} initialVideoPrompt={scene.videoPrompt} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid grid-cols-1 gap-4">
-                            <span>Reference Image</span>
-                            <ReferenceImageComponent uploadedImage={uploadedI2IReferenceImage} setUploadedImage={setUploadedI2IReferenceImage} />
-                        </div>
-                        <div className="grid grid-cols-1 gap-4">
-                            <span>Generated Image</span>
-                            <ImageComponent sceneId={scene.id} initialImageUrl={scene.imageUrl || ""} enableGeneration={enableGeneration} referenceImageUrl={uploadedI2IReferenceImage} />
-                        </div>
+                    <div className="space-y-4">
+                        <ImageComponent sceneId={scene.id} initialImageUrl={scene.imageUrl || ""} enableGeneration={!!enableGeneration} />
                     </div>
-                    {enableGeneration && <div className="grid grid-cols-2 gap-4">
-                        <ReferenceImageComponent uploadedImage={uploadedI2VReferenceVideo} setUploadedImage={setUploadedI2VReferenceVideo} />
-                        <VideoComponent sceneId={scene.id} initialVideoUrl={scene.videoUrl || ""} enableGeneration={enableGeneration && !!scene.imageUrl} />
+                    {scene.imageUrl && <div className="grid grid-cols-1 gap-4">
+                        <VideoComponent sceneId={scene.id} initialVideoUrl={scene.videoUrl || ""} referenceImageUrl={scene.imageUrl || ""} />
                     </div>}
                 </div>
             </div>
         </div>
     )
 }
+

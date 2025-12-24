@@ -60,23 +60,23 @@ export default function SequentialView({ scenes, project }: { scenes: Scene[], p
                     Scene {activeSceneIndex + 1} of {scenes.length}
                 </span>
             </div>
-            
+
             {/* Scene Selector Carousel */}
             <div className="space-y-4 bg-secondary/20 p-4 rounded-xl border">
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent">
                     {scenes.map((scene, index) => {
                         const isActive = activeSceneIndex === index
-                        const isCompleted = !!scene.video_url
-                        const hasImage = !!scene.image_url
-                        
+                        const isCompleted = !!scene.videoUrl
+                        const hasImage = !!scene.imageUrl
+
                         return (
                             <button
                                 key={scene.id}
                                 onClick={() => setActiveSceneIndex(index)}
                                 className={cn(
                                     "flex flex-col items-center justify-center min-w-[80px] h-20 rounded-lg border transition-all duration-200 relative group shrink-0",
-                                    isActive 
-                                        ? "border-primary bg-primary/10 shadow-sm" 
+                                    isActive
+                                        ? "border-primary bg-primary/10 shadow-sm"
                                         : "border-transparent bg-background hover:bg-accent hover:border-border"
                                 )}
                             >
@@ -92,12 +92,12 @@ export default function SequentialView({ scenes, project }: { scenes: Scene[], p
                                 )}>
                                     {index + 1}
                                 </span>
-                                
+
                                 <div className="absolute top-1 right-1 flex gap-0.5">
                                     {hasImage && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Image generated" />}
                                     {isCompleted && <div className="w-1.5 h-1.5 rounded-full bg-green-500" title="Video generated" />}
                                 </div>
-                                
+
                                 {isActive && (
                                     <div className="absolute -bottom-1 w-8 h-1 rounded-t-full bg-primary" />
                                 )}
@@ -117,11 +117,11 @@ export default function SequentialView({ scenes, project }: { scenes: Scene[], p
                         <ChevronLeft className="w-4 h-4 mr-2" />
                         Previous
                     </Button>
-                    
+
                     <div className="text-xs text-muted-foreground hidden sm:block">
                         navigate with arrow keys
                     </div>
-                    
+
                     <Button
                         variant="ghost"
                         size="sm"
@@ -137,10 +137,10 @@ export default function SequentialView({ scenes, project }: { scenes: Scene[], p
 
             <div className="relative min-h-[400px] animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {activeScene && (
-                    <SceneCard 
-                        key={activeScene.id} 
-                        scene={activeScene} 
-                        enableGeneration={true} 
+                    <SceneCard
+                        key={activeScene.id}
+                        scene={activeScene}
+                        enableGeneration={true}
                     />
                 )}
             </div>

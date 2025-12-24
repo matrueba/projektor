@@ -46,7 +46,7 @@
   "86": {
     "inputs": {
       "add_noise": "enable",
-      "noise_seed": 871484064911724,
+      "noise_seed": 606418908995934,
       "steps": 4,
       "cfg": 1,
       "sampler_name": "euler",
@@ -116,7 +116,7 @@
   },
   "93": {
     "inputs": {
-      "text": "Epic crane shot rising above celebrating warriors revealing mountain majesty beyond, protagonist elevated on shields in center frame, golden sunset light sweeping across scene, banners waving, slow majestic ascent emphasizing historical gravitas, medium motion intensity",
+      "text": "Slow and steady camera push-in, the runner's hands actively tying the knot, puffs of white steam breath rising and fading rhythmically with the runner's breathing, subtle swirling fog in the background, smooth cinematic motion, high fidelity.",
       "clip": [
         "84",
         0
@@ -162,7 +162,7 @@
   },
   "97": {
     "inputs": {
-      "image": "final (1).png"
+      "image": "z-image_00002_.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -171,8 +171,8 @@
   },
   "98": {
     "inputs": {
-      "width": 1280,
-      "height": 720,
+      "width": 640,
+      "height": 640,
       "length": 81,
       "batch_size": 1,
       "positive": [

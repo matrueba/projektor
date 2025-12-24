@@ -13,7 +13,7 @@ interface ProjectCardProps {
     name: string
     theme: string | null
     status: string | null
-    created_at: string
+    createdAt: string
   }
 }
 
@@ -22,15 +22,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   const onConfirmDelete = async (e: React.MouseEvent) => {
-     e.preventDefault()
-     e.stopPropagation()
-     
-     startTransition(async () => {
-       const result = await deleteProject(project.id)
-       if (result.success) {
-         setIsOpen(false)
-       }
-     })
+    e.preventDefault()
+    e.stopPropagation()
+
+    startTransition(async () => {
+      const result = await deleteProject(project.id)
+      if (result.success) {
+        setIsOpen(false)
+      }
+    })
   }
 
   return (
@@ -47,22 +47,22 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <span className={cn(
               "px-2 py-1 rounded-full",
               project.status === 'completed' ? 'bg-green-100 text-green-800' :
-              project.status === 'failed' ? 'bg-red-100 text-red-800' :
-              'bg-blue-100 text-blue-800'
+                project.status === 'failed' ? 'bg-red-100 text-red-800' :
+                  'bg-blue-100 text-blue-800'
             )}>
               {project.status || 'draft'}
             </span>
             <span className="text-muted-foreground">
-              {new Date(project.created_at).toLocaleDateString()}
+              {new Date(project.createdAt).toLocaleDateString()}
             </span>
           </div>
         </div>
       </Link>
-      
+
       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        <Button 
-          variant="destructive" 
-          size="icon" 
+        <Button
+          variant="destructive"
+          size="icon"
           className="h-8 w-8"
           onClick={(e) => {
             e.preventDefault()
@@ -75,7 +75,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
           onClick={(e) => {
             e.preventDefault()
@@ -83,7 +83,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             setIsOpen(false)
           }}
         >
-          <div 
+          <div
             className="bg-background border p-6 rounded-lg shadow-lg max-w-md w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
@@ -93,8 +93,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
               "{project.name}" and all generated content.
             </p>
             <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={(e) => {
                   e.stopPropagation()
                   setIsOpen(false)
@@ -102,7 +102,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 variant="destructive"
                 onClick={onConfirmDelete}
                 disabled={isPending}

@@ -19,13 +19,13 @@ export default async function Dashboard() {
   const { data: projects } = await supabase
     .from('projects')
     .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+    .eq('userId', user.id)
+    .order('createdAt', { ascending: false })
 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b h-16 flex items-center px-6 justify-between">
-        <h1 className="font-bold text-xl">Kreator Dashboard</h1>
+        <h1 className="font-bold text-xl">Projektor Dashboard</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{user.email}</span>
           <Link href="/settings">
