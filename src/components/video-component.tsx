@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { RotateCcw, Sparkles, Download, Loader2, Video as VideoIcon } from "lucide-react"
 import { generateVideoForScene, getSignedUrl } from "@/app/actions"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 
 export function VideoComponent({ sceneId, initialVideoUrl, referenceImageUrl }: { sceneId: string; initialVideoUrl: string; referenceImageUrl: string }) {
     const [videoUrl, setVideoUrl] = useState<string | null>(null)
@@ -41,14 +40,6 @@ export function VideoComponent({ sceneId, initialVideoUrl, referenceImageUrl }: 
     const handleGenerate = async () => {
         setIsGenerating(true)
         setProgress(null)
-        const supabase = createClient()
-        const channel = supabase.channel(`scene-${sceneId}`)
-
-        channel.on('broadcast', { event: 'progress' }, (payload) => {
-            if (payload.payload && typeof payload.payload.value === 'number' && typeof payload.payload.max === 'number') {
-                setProgress(payload.payload)
-            }
-        }).subscribe()
 
         try {
             const signedUrlResult = await getSignedUrl(referenceImageUrl)

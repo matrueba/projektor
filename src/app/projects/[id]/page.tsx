@@ -1,31 +1,19 @@
-import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Palette, CircleDot } from "lucide-react"
-import { cookies } from "next/headers"
 import BatchView from "./batch"
 import SequentialView from "./sequential"
+import { getCurrentUser, getProjectById, getScenesByProjectId } from "@/lib/db"
 
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
+  const user = getCurrentUser()
 
-  const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
-  const { data: project } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  const { data: scenes } = await supabase
-    .from('scenes')
-    .select('*')
-    .eq('projectId', id)
-    .order('order', { ascending: true })
+  const project = getProjectById(id)
+  const scenes = getScenesByProjectId(id)
 
   if (!project) {
     return <div>Project not found</div>

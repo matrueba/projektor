@@ -10,12 +10,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
       },
-      {
-        protocol: 'https',
-        hostname: '**.supabase.co',
-      }
     ],
   },
+  // Allow better-sqlite3 native module
+  serverExternalPackages: ['better-sqlite3'],
 };
 
 export default nextConfig;

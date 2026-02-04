@@ -1,10 +1,13 @@
-import { updateSession } from "@/lib/supabase/middleware"
-import { NextRequest } from "next/server"
+import { NextResponse, type NextRequest } from 'next/server'
 
-export async function proxy(req: NextRequest) {
-  return await updateSession(req)
+// In local mode, we don't need authentication checks
+// This proxy just passes through all requests
+export default function proxy(request: NextRequest) {
+  // Allow all requests to pass through
+  return NextResponse.next({ request })
 }
 
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+// Keep the updateSession function for backwards compatibility
+export async function updateSession(request: NextRequest) {
+  return NextResponse.next({ request })
 }

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { RotateCcw, Sparkles, Download, Image as ImageIcon, Loader2 } from "lucide-react"
 import { generateImageForScene, getSignedUrl } from "@/app/actions"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { ReferenceImageComponent } from "./reference-image"
 
 export interface ImageComponentProps {
@@ -66,14 +65,6 @@ export function ImageComponent({ sceneId, initialImageUrl, enableGeneration }: I
     const handleGenerate = async () => {
         setIsGenerating(true)
         setProgress(null)
-        const supabase = createClient()
-        const channel = supabase.channel(`scene-${sceneId}`)
-
-        channel.on('broadcast', { event: 'progress' }, (payload) => {
-            if (payload.payload && typeof payload.payload.value === 'number' && typeof payload.payload.max === 'number') {
-                setProgress(payload.payload)
-            }
-        }).subscribe()
 
         try {
             const result = await generateImageForScene(sceneId, uploadedI2IReferenceImage || undefined)
@@ -86,7 +77,6 @@ export function ImageComponent({ sceneId, initialImageUrl, enableGeneration }: I
             console.error(error)
             alert("An error occurred: " + (error as Error).message)
         } finally {
-            await supabase.removeChannel(channel)
             setIsGenerating(false)
             setProgress(null)
         }

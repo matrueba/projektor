@@ -1,26 +1,19 @@
 import { redirect } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/server"
 import { Plus, Settings, LogOut } from "lucide-react"
-import { cookies } from "next/headers"
 import { signOutAction } from "@/app/actions"
 import { ProjectCard } from "@/components/project-card"
+import { getCurrentUser, getProjectsByUserId } from "@/lib/db"
 
 export default async function Dashboard() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = getCurrentUser()
 
   if (!user) {
     redirect("/login")
   }
 
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('userId', user.id)
-    .order('createdAt', { ascending: false })
+  const projects = getProjectsByUserId(user.id)
 
   return (
     <div className="min-h-screen flex flex-col">

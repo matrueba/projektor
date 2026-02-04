@@ -9,26 +9,30 @@ export interface Project {
   id: string
   userId: string
   name: string
-  theme: string
-  style: string
-  constraints?: string
+  theme: string | null
+  style: string | null
+  constraints?: string | null
   sceneCount: number
-  status: 'draft' | 'processing' | 'completed' | 'failed'
-  createdAt: Date
+  maxDuration?: number | null
+  generationMode?: string
+  status: string
+  createdAt: string | Date
+  updatedAt?: string | Date
 }
 
 export interface Scene {
   id: string
   projectId: string
   order: number
-  script: string
-  imagePrompt: string
-  videoPrompt: string
-  imageUrl?: string
-  videoUrl?: string
-  status: 'pending' | 'processing' | 'completed' | 'failed'
-  startAt: number
-  endAt: number
+  script: string | null
+  imagePrompt: string | null
+  videoPrompt: string | null
+  imageUrl?: string | null
+  videoUrl?: string | null
+  status: string
+  startAt: number | null
+  endAt: number | null
+  createdAt?: string | Date
 }
 
 export type CreateProjectInput = {

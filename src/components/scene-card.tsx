@@ -8,11 +8,11 @@ import { useState } from "react"
 interface Scene {
     id: string
     order: number
-    script: string
-    imagePrompt: string
-    videoPrompt: string
-    imageUrl?: string
-    videoUrl?: string
+    script: string | null
+    imagePrompt: string | null
+    videoPrompt: string | null
+    imageUrl?: string | null
+    videoUrl?: string | null
 }
 
 export function SceneCard({ scene, enableGeneration }: { scene: Scene; enableGeneration?: boolean }) {
@@ -29,7 +29,7 @@ export function SceneCard({ scene, enableGeneration }: { scene: Scene; enableGen
 
                 <div className="space-y-6 flex-1">
                     <div className="grid grid-cols-1 gap-4">
-                        <ScriptComponent sceneId={scene.id} initialScript={scene.script} initialImagePrompt={scene.imagePrompt} initialVideoPrompt={scene.videoPrompt} />
+                        <ScriptComponent sceneId={scene.id} initialScript={scene.script || ""} initialImagePrompt={scene.imagePrompt || ""} initialVideoPrompt={scene.videoPrompt || ""} />
                     </div>
                     <div className="space-y-4">
                         <ImageComponent sceneId={scene.id} initialImageUrl={scene.imageUrl || ""} enableGeneration={!!enableGeneration} />
