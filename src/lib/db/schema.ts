@@ -1,37 +1,34 @@
-import Database from 'better-sqlite3'
+import Database from "better-sqlite3"
 
+/**
+ * Initializes the SQLite database schema for the application.
+ * Creates tables for projects, scenes, and settings if they don't exist.
+ * Also creates indexes for performance and inserts default settings.
+ * @param {Database.Database} db - Better-sqlite3 database instance
+ * @returns {void}
+ */
 export function initializeSchema(db: Database.Database): void {
-    // Users table for local auth
-    db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      email TEXT UNIQUE,
-      name TEXT,
-      createdAt TEXT DEFAULT (datetime('now'))
-    )
-  `)
 
-    // Projects table
-    db.exec(`
+
+  // Projects table
+  db.exec(`
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
-      userId TEXT NOT NULL,
       name TEXT NOT NULL,
       theme TEXT,
       style TEXT,
       constraints TEXT,
       sceneCount INTEGER DEFAULT 3,
       maxDuration INTEGER,
-      generationMode TEXT DEFAULT 'batch',
+      generationMode TEXT DEFAULT 'sequential',
       status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'script', 'image', 'video', 'completed', 'failed')),
       createdAt TEXT DEFAULT (datetime('now')),
-      updatedAt TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+      updatedAt TEXT DEFAULT (datetime('now'))
     )
   `)
 
-    // Scenes table
-    db.exec(`
+  // Scenes table
+  db.exec(`
     CREATE TABLE IF NOT EXISTS scenes (
       id TEXT PRIMARY KEY,
       projectId TEXT NOT NULL,
@@ -49,19 +46,29 @@ export function initializeSchema(db: Database.Database): void {
     )
   `)
 
-    // Create indexes
-    db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_projects_userId ON projects(userId);
+  // Settings table for app configuration
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      id TEXT PRIMARY KEY DEFAULT 'default',
+      isLocal INTEGER DEFAULT 0,
+      localUrl TEXT DEFAULT 'http://localhost:11434',
+      comfyUrl TEXT DEFAULT 'localhost:8188',
+      model TEXT DEFAULT 'gemini-3-flash-preview',
+      provider TEXT DEFAULT 'google',
+      updatedAt TEXT DEFAULT (datetime('now'))
+    )
+  `)
+
+  // Create indexes
+  db.exec(`
     CREATE INDEX IF NOT EXISTS idx_scenes_projectId ON scenes(projectId);
   `)
 
-    // Create default local user if not exists
-    const defaultUser = db.prepare('SELECT id FROM users WHERE id = ?').get('local-user')
-    if (!defaultUser) {
-        db.prepare('INSERT INTO users (id, email, name) VALUES (?, ?, ?)').run(
-            'local-user',
-            'local@projektor.local',
-            'Local User'
-        )
-    }
+  // Create default settings if not exists
+  const defaultSettings = db
+    .prepare("SELECT id FROM settings WHERE id = ?")
+    .get("default")
+  if (!defaultSettings) {
+    db.prepare("INSERT INTO settings (id) VALUES (?)").run("default")
+  }
 }

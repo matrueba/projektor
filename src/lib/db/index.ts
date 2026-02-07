@@ -1,3 +1,2 @@
-export { getDatabase, closeDatabase } from './db'
-export * from './queries'
-export { getCurrentUser } from '@/lib/auth'
+export { getDatabase, closeDatabase } from "./db"
+export * from "./queries"

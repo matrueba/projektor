@@ -1,34 +1,31 @@
-import { redirect } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Palette, CircleDot } from "lucide-react"
-import BatchView from "./batch"
 import SequentialView from "./sequential"
-import { getCurrentUser, getProjectById, getScenesByProjectId } from "@/lib/db"
-
+import { getProjectById, getScenesByProjectId } from "@/lib/db"
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const user = getCurrentUser()
 
-  if (!user) redirect("/login")
-
-  const project = getProjectById(id)
-  const scenes = getScenesByProjectId(id)
+  const project = await getProjectById(id)
+  const scenes = await getScenesByProjectId(id)
 
   if (!project) {
     return <div>Project not found</div>
   }
 
-  let status = project.status || 'draft'
-  let generationMode = project.generationMode || 'batch'
-  const statusDescription = status === 'draft' ? 'Draft - Not started' :
-    status === 'script' ? 'Script Generated - Waiting for image generation' :
-      status === 'image' ? 'Images Generated - Waiting for video generation' :
-        status === 'video' ? 'Video Generated - Ready to download' :
-          status === 'completed' ? 'Completed - All tasks finished' :
-            'failed';
-
-
+  let status = project.status || "draft"
+  const statusDescription =
+    status === "draft"
+      ? "Draft - Not started"
+      : status === "script"
+        ? "Script Generated - Waiting for image generation"
+        : status === "image"
+          ? "Images Generated - Waiting for video generation"
+          : status === "video"
+            ? "Video Generated - Ready to download"
+            : status === "completed"
+              ? "Completed - All tasks finished"
+              : "failed"
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,26 +40,36 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </Link>
 
           <div className="border-b pb-8">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-6">{project.name}</h1>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl mb-6">
+              {project.name}
+            </h1>
             <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50">
                 <Palette className="w-4 h-4" />
-                <span className="font-medium text-foreground">{project.style}</span>
+                <span className="font-medium text-foreground">
+                  {project.style}
+                </span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50">
                 <CircleDot className="w-4 h-4" />
-                <span className="font-medium text-foreground capitalize">{statusDescription}</span>
+                <span className="font-medium text-foreground capitalize">
+                  {statusDescription}
+                </span>
               </div>
             </div>
             {project.theme && (
               <div className="mt-3 text-sm text-muted-foreground">
-                Theme: <span className="font-medium text-foreground">{project.theme}</span>
+                Theme:{" "}
+                <span className="font-medium text-foreground">
+                  {project.theme}
+                </span>
               </div>
             )}
           </div>
         </div>
-        {generationMode === 'batch' && scenes && <BatchView status={status} scenes={scenes} project={project} />}
-        {generationMode === 'sequential' && scenes && <SequentialView status={status} scenes={scenes} project={project} />}
+        {scenes && (
+          <SequentialView status={status} scenes={scenes} project={project} />
+        )}
       </div>
     </div>
   )

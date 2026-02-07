@@ -1,23 +1,15 @@
-export interface User {
-  id: string
-  name?: string | null
-  email?: string | null
-  image?: string | null
-}
-
 export interface Project {
   id: string
-  userId: string
   name: string
   theme: string | null
   style: string | null
-  constraints?: string | null
+  constraints: string | null
   sceneCount: number
-  maxDuration?: number | null
-  generationMode?: string
+  maxDuration: number | null
+  generationMode: "sequential"
   status: string
-  createdAt: string | Date
-  updatedAt?: string | Date
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Scene {
@@ -32,7 +24,18 @@ export interface Scene {
   status: string
   startAt: number | null
   endAt: number | null
-  createdAt?: string | Date
+  createdAt: string | Date
+}
+
+export interface Settings {
+  id: string
+  isLocal: boolean
+  localUrl: string
+  comfyUrl: string
+  model: string
+  provider: string
+  apiKey: string | null
+  updatedAt: string
 }
 
 export type CreateProjectInput = {
@@ -42,5 +45,5 @@ export type CreateProjectInput = {
   constraints: string
   sceneCount: number
   maxDuration: number
-  generationMode: 'batch' | 'sequential'
+  generationMode: "sequential"
 }
