@@ -56,7 +56,6 @@ export async function refineScene(sceneId: string, userRequest: string) {
  */
 export async function createProject(data: CreateProjectInput) {
   const project = await dbCreateProject({
-    userId: "local-user",
     name: data.name,
     theme: data.theme,
     style: data.style,

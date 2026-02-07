@@ -141,4 +141,5 @@ vite.config.ts.timestamp-*
 # Dev files
 .package-lock.json
 .vscode
-.src/content/*
+src/content/*
+data/*
