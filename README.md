@@ -5,7 +5,7 @@
 ## 🎥 Example Output
 
 <p align="center" width="100%">
-<video src="https://github.com/user-attachments/assets/fe8dc458-1db6-493b-90ea-7df96a919f11" width="80%" controls></video>
+<video src="https://github.com/user-attachments/assets/fe8dc458-1db6-493b-90ea-7df96a919f11" width="50%" controls></video>
 </p>
 
 ## 📖 Table of Contents
