@@ -4,9 +4,9 @@
 
 ## 🎥 Example Output
 
-<div align="center">
-  <video src="examples/Los_Alamos_1945.webm" width="100%" controls></video>
-</div>
+<p align="center" width="100%">
+<video src="" width="80%" controls></video>
+</p>
 
 ## 📖 Table of Contents
 
