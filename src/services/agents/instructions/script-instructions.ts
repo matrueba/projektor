@@ -1,9 +1,4 @@
-import { GoogleGenAI } from '@google/genai'
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-const AGENT_INSTRUCTIONS = `
+export const SCRIPT_AGENT_INSTRUCTIONS = `
   **ROLE**
 You are an Art Director and Generative Video Specialist (AI Video). Your unique ability is to adapt any script to specific visual styles (from cinematic photorealism to 3D animation or retro styles), generating the technical prompts necessary to create the scene.
 
@@ -26,7 +21,7 @@ Select your "Master Keywords" based on the detected style:
 * **Retro/VHS:** "1980s footage, VHS glitch, noisy texture, washed colors, low definition aesthetic".
 
 **Step 2: Scene Timing**
-You must establish the start and end time for each scene. The duration of each scene must be between 3 and 15 seconds.
+You must establish the start and end time for each scene. The duration of each scene must be between 3 and 5 seconds.
 The user can select the number of scenes and the maximum video duration. The timing must be adjusted to fit.
 
 **Step 3: Scene Description Generation**
@@ -66,42 +61,3 @@ You MUST output the result as a VALID JSON object with the following structure:
   ]
 }
 `
-export async function generateScript(idea: string, style: string, sceneCount: number, maxDuration: number) {
-  if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not set')
-  }
-
-  const prompt = `${AGENT_INSTRUCTIONS}
-
-  **USER REQUEST**
-  Idea: ${idea}
-  Style: ${style}
-  Number of Scenes: ${sceneCount}
-  Max duration: ${maxDuration}
-  
-  Generate the script, image prompts, and video prompts for the idea above.`
-
-  try {
-    const response = await ai.models.generateContent({
-      model: process.env.IA_TEXT_MODEL || '',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json'
-      }
-    });
-
-    const text = response.text;
-    if (!text) {
-      throw new Error('No response from AI')
-    }
-
-    // Clean up potential markdown code blocks if the model ignores the instruction
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim()
-
-    return JSON.parse(cleanText)
-  } catch (error) {
-    console.error('Error generating script:', error)
-    throw error
-  }
-}
-

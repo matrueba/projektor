@@ -139,7 +139,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Dev files
-.env.development
-.env.production
 .package-lock.json
 .vscode
+.src/content/*

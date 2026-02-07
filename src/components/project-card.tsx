@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Trash2 } from "lucide-react"
 import { useTransition, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { deleteProject } from "@/app/actions"
+import { deleteProject } from "@/app/actions/project"
 import { cn } from "@/lib/utils"
 
 interface ProjectCardProps {
@@ -38,19 +38,25 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <Link href={`/projects/${project.id}`} className="block h-full">
         <div className="border rounded-lg p-6 hover:border-primary transition-colors h-full flex flex-col bg-card text-card-foreground shadow-sm">
           <div className="flex justify-between items-start mb-2">
-            <h3 className="font-semibold text-lg truncate pr-8">{project.name}</h3>
+            <h3 className="font-semibold text-lg truncate pr-8">
+              {project.name}
+            </h3>
           </div>
           <p className="text-sm text-muted-foreground line-clamp-2 mb-4 min-h-[2.5rem]">
             {project.theme || "No theme"}
           </p>
           <div className="mt-auto flex items-center justify-between text-xs">
-            <span className={cn(
-              "px-2 py-1 rounded-full",
-              project.status === 'completed' ? 'bg-green-100 text-green-800' :
-                project.status === 'failed' ? 'bg-red-100 text-red-800' :
-                  'bg-blue-100 text-blue-800'
-            )}>
-              {project.status || 'draft'}
+            <span
+              className={cn(
+                "px-2 py-1 rounded-full",
+                project.status === "completed"
+                  ? "bg-green-100 text-green-800"
+                  : project.status === "failed"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-blue-100 text-blue-800",
+              )}
+            >
+              {project.status || "draft"}
             </span>
             <span className="text-muted-foreground">
               {new Date(project.createdAt).toLocaleDateString()}
@@ -87,10 +93,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
             className="bg-background border p-6 rounded-lg shadow-lg max-w-md w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold mb-2">Are you absolutely sure?</h2>
+            <h2 className="text-lg font-semibold mb-2">
+              Are you absolutely sure?
+            </h2>
             <p className="text-muted-foreground mb-6">
-              This action cannot be undone. This will permanently delete the project
-              "{project.name}" and all generated content.
+              This action cannot be undone. This will permanently delete the
+              project "{project.name}" and all generated content.
             </p>
             <div className="flex justify-end gap-2">
               <Button

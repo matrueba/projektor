@@ -1,52 +1,37 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { createProject } from '@/app/actions'
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { createProject } from "@/app/actions/project"
+import Link from "next/link"
+import { X } from "lucide-react"
+import { useToast } from "@/components/ui/toast"
 
 export function CreateProjectForm() {
   const [isLoading, setIsLoading] = useState(false)
-
-  const [activeHelp, setActiveHelp] = useState('')
+  const [activeHelp, setActiveHelp] = useState("")
+  const toast = useToast()
 
   const fieldHelp: Record<string, string> = {
-    name: 'Nombre del proyecto. Te ayudará a identificar este vídeo dentro de la aplicación.',
-    theme: 'Describe la idea principal del vídeo para que el sistema pueda generar un concepto coherente.',
-    style: 'Selecciona el estilo visual general que quieres para el vídeo.',
-    sceneCount: 'Número de escenas que tendrá el vídeo.',
-    maxDuration: 'Duración máxima total del vídeo, en segundos.',
-    generationMode: 'Modo en que se generarán las escenas: todas a la vez o de forma secuencial.',
-    constraints: 'Elementos que quieres evitar o limitar en el resultado (por ejemplo: sin texto en pantalla).'
-  }
-  const generationModeHelp: Record<'batch' | 'sequential', string> = {
-    batch: 'Batch: Se genera el contenido en lote, más rápido pero menor capacidad de personalización.',
-    sequential: 'Sequential: El contenido se genera secuencialmente. Permite un control total.'
+    name: "Project name. It will help you identify this video within the application.",
+    theme:
+      "Describe the main idea of the video so the system can generate a coherent concept.",
+    style: "Select the general visual style you want for the video.",
+    sceneCount: "Number of scenes the video will have.",
+    maxDuration: "Total maximum duration of the video, in seconds.",
+    constraints:
+      "Elements you want to avoid or limit in the result (e.g., no text on screen).",
   }
 
   function handleFieldEnter(field: keyof typeof fieldHelp) {
     setActiveHelp(fieldHelp[field])
   }
 
-  function handleGenerationModeChange(event: React.ChangeEvent<HTMLSelectElement>) {
-    const value = event.target.value as keyof typeof generationModeHelp
-    setActiveHelp(generationModeHelp[value])
-  }
-
-  function handleGenerationModeFocus(event: React.FocusEvent<HTMLSelectElement>) {
-    const value = event.currentTarget.value as keyof typeof generationModeHelp
-    setActiveHelp(generationModeHelp[value])
-  }
-
-  function handleGenerationModeMouseEnter(event: React.MouseEvent<HTMLSelectElement>) {
-    const value = event.currentTarget.value as keyof typeof generationModeHelp
-    setActiveHelp(generationModeHelp[value])
-  }
-
   function clearHelp() {
-    setActiveHelp('')
+    setActiveHelp("")
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -54,14 +39,23 @@ export function CreateProjectForm() {
     setIsLoading(true)
 
     const formData = new FormData(event.currentTarget)
+    const projectName = formData.get("name") as string
+    const theme = formData.get("theme") as string
+    const style = formData.get("style") as string
+    const constraints = formData.get("constraints") as string
+    const sceneCount = parseInt(formData.get("sceneCount") as string, 10)
+    const maxDuration = parseInt(formData.get("maxDuration") as string, 10)
+    const generationMode = "sequential"
 
-    const projectName = formData.get('name') as string
-    const theme = formData.get('theme') as string
-    const style = formData.get('style') as string
-    const constraints = formData.get('constraints') as string
-    const sceneCount = parseInt(formData.get('sceneCount') as string, 10)
-    const maxDuration = parseInt(formData.get('maxDuration') as string, 10)
-    const generationMode = formData.get('generationMode') as 'batch' | 'sequential'
+    // Validate that each scene doesn't exceed 8 seconds
+    const maxSecondsPerScene = 5
+    const secondsPerScene = maxDuration / sceneCount
+    if (secondsPerScene > maxSecondsPerScene) {
+      const toastText = `Each scene cannot exceed ${maxSecondsPerScene} seconds. With ${sceneCount} scenes and ${maxDuration}s duration, each scene would be ${secondsPerScene.toFixed(1)}s. Please reduce the duration or add more scenes.`
+      toast.showToast("Error", toastText, "error")
+      setIsLoading(false)
+      return
+    }
 
     await createProject({
       name: projectName,
@@ -70,23 +64,32 @@ export function CreateProjectForm() {
       constraints,
       sceneCount,
       maxDuration,
-      generationMode
+      generationMode,
     })
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6 max-w-2xl mx-auto p-6 border rounded-lg shadow-sm">
+    <form
+      onSubmit={onSubmit}
+      className="relative space-y-6 max-w-2xl mx-auto p-6 border rounded-lg shadow-sm"
+    >
+      <Link
+        href="/dashboard"
+        className="absolute top-4 right-4 p-2 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+        title="Cancelar y volver al dashboard"
+      >
+        <X className="h-4 w-4" />
+      </Link>
       <div className="space-y-2">
-
         <Label htmlFor="name">Project Name</Label>
         <Input
           id="name"
           name="name"
           required
           placeholder="My Awesome Video Project"
-          onFocus={() => handleFieldEnter('name')}
+          onFocus={() => handleFieldEnter("name")}
           onBlur={clearHelp}
-          onMouseEnter={() => handleFieldEnter('name')}
+          onMouseEnter={() => handleFieldEnter("name")}
           onMouseLeave={clearHelp}
         />
       </div>
@@ -99,9 +102,9 @@ export function CreateProjectForm() {
           required
           placeholder="A commercial for a new futuristic running shoe..."
           className="h-32"
-          onFocus={() => handleFieldEnter('theme')}
+          onFocus={() => handleFieldEnter("theme")}
           onBlur={clearHelp}
-          onMouseEnter={() => handleFieldEnter('theme')}
+          onMouseEnter={() => handleFieldEnter("theme")}
           onMouseLeave={clearHelp}
         />
       </div>
@@ -114,9 +117,9 @@ export function CreateProjectForm() {
               id="style"
               name="style"
               className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              onFocus={() => handleFieldEnter('style')}
+              onFocus={() => handleFieldEnter("style")}
               onBlur={clearHelp}
-              onMouseEnter={() => handleFieldEnter('style')}
+              onMouseEnter={() => handleFieldEnter("style")}
               onMouseLeave={clearHelp}
             >
               <option value="cinematic">Cinematic</option>
@@ -138,9 +141,9 @@ export function CreateProjectForm() {
             min={1}
             max={10}
             defaultValue={3}
-            onFocus={() => handleFieldEnter('sceneCount')}
+            onFocus={() => handleFieldEnter("sceneCount")}
             onBlur={clearHelp}
-            onMouseEnter={() => handleFieldEnter('sceneCount')}
+            onMouseEnter={() => handleFieldEnter("sceneCount")}
             onMouseLeave={clearHelp}
           />
         </div>
@@ -148,7 +151,7 @@ export function CreateProjectForm() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="style">Max duration</Label>
+          <Label htmlFor="maxDuration">Max duration</Label>
           <Input
             id="maxDuration"
             name="maxDuration"
@@ -156,33 +159,13 @@ export function CreateProjectForm() {
             min={10}
             max={300}
             defaultValue={60}
-            onFocus={() => handleFieldEnter('maxDuration')}
+            onFocus={() => handleFieldEnter("maxDuration")}
             onBlur={clearHelp}
-            onMouseEnter={() => handleFieldEnter('maxDuration')}
+            onMouseEnter={() => handleFieldEnter("maxDuration")}
             onMouseLeave={clearHelp}
           />
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="generationMode">Generation Mode</Label>
-          <div className="relative">
-            <select
-              id="generationMode"
-              name="generationMode"
-              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              onFocus={handleGenerationModeFocus}
-              onChange={handleGenerationModeChange}
-              onBlur={clearHelp}
-              onMouseEnter={handleGenerationModeMouseEnter}
-              onMouseLeave={clearHelp}
-            >
-              <option value="batch">Batch</option>
-              <option value="sequential">Sequential</option>
-            </select>
-          </div>
-        </div>
       </div>
-
 
       <div className="space-y-2">
         <Label htmlFor="constraints">Constraints / Negative Prompts</Label>
@@ -190,19 +173,21 @@ export function CreateProjectForm() {
           id="constraints"
           name="constraints"
           placeholder="No text on screen, no people, etc."
-          onFocus={() => handleFieldEnter('constraints')}
+          onFocus={() => handleFieldEnter("constraints")}
           onBlur={clearHelp}
-          onMouseEnter={() => handleFieldEnter('constraints')}
+          onMouseEnter={() => handleFieldEnter("constraints")}
           onMouseLeave={clearHelp}
         />
       </div>
 
       <div className="text-xs text-muted-foreground min-h-[1.5rem]">
-        {activeHelp || 'Pasa el ratón por encima de cada campo o selección para ver una descripción.'}
+        {activeHelp ||
+          "Hover over each field or selection to see a description."}
       </div>
 
+
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Generating Concept...' : 'Create Project'}
+        {isLoading ? "Generating Concept..." : "Create Project"}
       </Button>
     </form>
   )

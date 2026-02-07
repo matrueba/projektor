@@ -1,34 +1,41 @@
-export interface User {
-  id: string
-  name?: string | null
-  email?: string | null
-  image?: string | null
-}
-
 export interface Project {
   id: string
-  userId: string
   name: string
-  theme: string
-  style: string
-  constraints?: string
+  theme: string | null
+  style: string | null
+  constraints: string | null
   sceneCount: number
-  status: 'draft' | 'processing' | 'completed' | 'failed'
-  createdAt: Date
+  maxDuration: number | null
+  generationMode: "sequential"
+  status: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Scene {
   id: string
   projectId: string
   order: number
-  script: string
-  imagePrompt: string
-  videoPrompt: string
-  imageUrl?: string
-  videoUrl?: string
-  status: 'pending' | 'processing' | 'completed' | 'failed'
-  startAt: number
-  endAt: number
+  script: string | null
+  imagePrompt: string | null
+  videoPrompt: string | null
+  imageUrl?: string | null
+  videoUrl?: string | null
+  status: string
+  startAt: number | null
+  endAt: number | null
+  createdAt: string | Date
+}
+
+export interface Settings {
+  id: string
+  isLocal: boolean
+  localUrl: string
+  comfyUrl: string
+  model: string
+  provider: string
+  apiKey: string | null
+  updatedAt: string
 }
 
 export type CreateProjectInput = {
@@ -38,5 +45,5 @@ export type CreateProjectInput = {
   constraints: string
   sceneCount: number
   maxDuration: number
-  generationMode: 'batch' | 'sequential'
+  generationMode: "sequential"
 }
